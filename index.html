@@ -209,7 +209,7 @@
 
         async function copyFolder(sourceFolder, destParentId) {
             showMessageWithLoader('Analyzing folder...');
-            const allFiles = await listAllFiles(sourceFolder.id);
+            const allFilesAndFolders = await listAllItems(sourceFolder.id);
             if (isCopyCancelled) { showMessage('Copy cancelled.', 'gray'); return; }
 
             const newFolder = await gapi.client.drive.files.create({
@@ -217,53 +217,75 @@
                 fields: 'id, name'
             });
 
-            await copyFolderRecursive(sourceFolder.id, newFolder.result.id, allFiles, 0);
+            // This map will store the new IDs of copied folders
+            const folderIdMap = new Map();
+            folderIdMap.set(sourceFolder.id, newFolder.result.id);
+            
+            let filesCopied = 0;
+
+            // First, create all subfolders to maintain the structure
+            const allFolders = allFilesAndFolders.filter(item => item.mimeType === 'application/vnd.google-apps.folder');
+            for (const folder of allFolders) {
+                 if (isCopyCancelled) { showMessage('Copy cancelled by user.', 'red'); return; }
+                 const parentId = folder.parents[0];
+                 const newParentId = folderIdMap.get(parentId);
+                 logMessage(`Creating subfolder: ${folder.name}`);
+                 const newSubFolder = await gapi.client.drive.files.create({
+                     resource: { name: folder.name, mimeType: 'application/vnd.google-apps.folder', parents: [newParentId] },
+                     fields: 'id'
+                 });
+                 folderIdMap.set(folder.id, newSubFolder.result.id);
+            }
+
+            // Now, copy all files into their correct new folders
+            const allFiles = allFilesAndFolders.filter(item => item.mimeType !== 'application/vnd.google-apps.folder');
+            for (const file of allFiles) {
+                if (isCopyCancelled) { showMessage('Copy cancelled by user.', 'red'); return; }
+                const parentId = file.parents[0];
+                const newParentId = folderIdMap.get(parentId);
+                logMessage(`Copying file: ${file.name}`);
+                await gapi.client.drive.files.copy({
+                    fileId: file.id,
+                    resource: { name: file.name, parents: [newParentId] }
+                });
+                filesCopied++;
+                updateProgressBar(filesCopied, allFiles.length);
+            }
+
             if (!isCopyCancelled) {
                 showMessage('Folder and all its contents copied successfully!', 'green');
             }
         }
         
-        async function listAllFiles(folderId) {
-            const allFiles = [];
+        async function listAllItems(folderId) {
+            let allItems = [];
             let pageToken = null;
-            do {
-                const response = await gapi.client.drive.files.list({
-                    q: `'${folderId}' in parents and trashed = false`,
-                    fields: 'nextPageToken, files(id, name, mimeType)',
-                    pageSize: 1000,
-                    pageToken: pageToken
-                });
-                allFiles.push(...response.result.files);
-                pageToken = response.result.nextPageToken;
-            } while (pageToken);
-            return allFiles;
-        }
+            let foldersToProcess = [folderId];
+            let processedFolders = new Set();
 
-        async function copyFolderRecursive(sourceFolderId, newParentFolderId, allFiles, filesCopied) {
-            const itemsInThisFolder = allFiles.filter(f => f.parents && f.parents.includes(sourceFolderId));
+            while(foldersToProcess.length > 0) {
+                let currentFolderId = foldersToProcess.shift();
+                if(processedFolders.has(currentFolderId)) continue;
+                processedFolders.add(currentFolderId);
 
-            for (const item of itemsInThisFolder) {
-                if (isCopyCancelled) { showMessage('Copy cancelled by user.', 'red'); return; }
-                
-                updateProgressBar(filesCopied, allFiles.length);
-                
-                if (item.mimeType === 'application/vnd.google-apps.folder') {
-                    const newSubFolder = await gapi.client.drive.files.create({
-                        resource: { name: item.name, mimeType: 'application/vnd.google-apps.folder', parents: [newParentFolderId] },
-                        fields: 'id'
+                do {
+                    const response = await gapi.client.drive.files.list({
+                        q: `'${currentFolderId}' in parents and trashed = false`,
+                        fields: 'nextPageToken, files(id, name, mimeType, parents)',
+                        pageSize: 1000,
+                        pageToken: pageToken
                     });
-                    logMessage(`Created subfolder: ${item.name}`);
-                    await copyFolderRecursive(item.id, newSubFolder.result.id, allFiles, filesCopied);
-                } else {
-                    logMessage(`Copying file: ${item.name}`);
-                    await gapi.client.drive.files.copy({
-                        fileId: item.id,
-                        resource: { name: item.name, parents: [newParentFolderId] }
-                    });
-                    filesCopied++;
-                }
+                    
+                    for(const item of response.result.files) {
+                        allItems.push(item);
+                        if(item.mimeType === 'application/vnd.google-apps.folder') {
+                            foldersToProcess.push(item.id);
+                        }
+                    }
+                    pageToken = response.result.nextPageToken;
+                } while (pageToken);
             }
-             return filesCopied;
+            return allItems;
         }
 
         // --- Utility Functions ---
