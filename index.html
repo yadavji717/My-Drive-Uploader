@@ -28,6 +28,9 @@
             backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        .theme-dark .text-primary { color: #ffffff; }
+        .theme-dark .text-secondary { color: #cae8ff; }
+        .theme-dark .input-bg { background-color: rgba(30, 41, 59, 0.5); border-color: #3e4c94; }
 
         /* --- Live Stars Theme --- */
         .theme-stars {
@@ -57,16 +60,42 @@
             from {background-position:0 0;}
             to {background-position:-10000px 5000px;}
         }
-        
-        .card {
-            z-index: 2;
-        }
         .theme-stars .card {
             background: rgba(10, 10, 25, 0.6);
             backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+        .theme-stars .text-primary { color: #ffffff; }
+        .theme-stars .text-secondary { color: #cae8ff; }
+        .theme-stars .input-bg { background-color: rgba(30, 41, 59, 0.5); border-color: #3e4c94; }
 
+        /* --- Rose Petal Theme --- */
+        .theme-rose {
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+        }
+        .theme-rose .card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .theme-rose .text-primary { color: #333; }
+        .theme-rose .text-secondary { color: #555; }
+        .theme-rose .input-bg { background-color: rgba(255, 255, 255, 0.7); border-color: #fbc2eb; }
+
+        /* --- Aqua Marine Theme --- */
+        .theme-aqua {
+            background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+        }
+        .theme-aqua .card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .theme-aqua .text-primary { color: #2c5282; }
+        .theme-aqua .text-secondary { color: #2a4365; }
+        .theme-aqua .input-bg { background-color: rgba(255, 255, 255, 0.7); border-color: #89f7fe; }
+        
+        .card { z-index: 2; }
         .loader {
             border: 4px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%;
@@ -76,46 +105,18 @@
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .progress-bar-container {
-            width: 100%;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 9999px;
-            overflow: hidden;
-        }
-        .progress-bar {
-            height: 10px;
-            background-color: #60a5fa;
-            width: 0%;
-            transition: width 0.3s ease-in-out;
-        }
-        #log-container {
-            max-height: 100px;
-            overflow-y: auto;
-            background: rgba(0,0,0,0.2);
-            padding: 8px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            text-align: left;
-        }
-        /* Toggle Switch CSS */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .progress-bar-container { width: 100%; background-color: rgba(255, 255, 255, 0.1); border-radius: 9999px; overflow: hidden; }
+        .progress-bar { height: 10px; background-color: #60a5fa; width: 0%; transition: width 0.3s ease-in-out; }
+        #log-container { max-height: 100px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; font-size: 0.8rem; text-align: left; }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4a5568; transition: .4s; border-radius: 34px; }
         .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #4299e1; }
         input:checked + .slider:before { transform: translateX(22px); }
-
-        /* Button Glow Effect */
-        .btn-glow {
-            transition: box-shadow 0.3s ease-in-out;
-        }
-        .btn-glow:hover {
-            box-shadow: 0 0 15px rgba(96, 165, 250, 0.8);
-        }
+        .btn-glow { transition: box-shadow 0.3s ease-in-out; }
+        .btn-glow:hover { box-shadow: 0 0 15px rgba(96, 165, 250, 0.8); }
     </style>
 </head>
 <body class="theme-dark flex items-center justify-center">
@@ -124,18 +125,17 @@
 
     <div class="card p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
         <div class="absolute top-4 right-4 flex space-x-2">
-            <button id="theme_dark_button" title="Dark Theme" class="w-8 h-8 rounded-full bg-indigo-900 border-2 border-white"></button>
-            <button id="theme_stars_button" title="Stars Theme" class="w-8 h-8 rounded-full bg-black border-2 border-gray-500 flex items-center justify-center">
-                <span class="text-white text-xs">✨</span>
+            <button id="theme_switcher" title="Change Theme" class="w-10 h-10 rounded-full bg-black/20 border-2 border-white/50 flex items-center justify-center text-xl">
+                <span>🎨</span>
             </button>
         </div>
 
-        <h1 class="text-3xl font-bold text-center mb-2 text-white">Rohan X Uploader</h1>
-        <p class="text-center text-blue-200 mb-8">Copy any Google Drive file or folder to your drive.</p>
+        <h1 class="text-3xl font-bold text-center mb-2 text-primary">Rohan X Uploader</h1>
+        <p class="text-center text-secondary mb-8">Copy any Google Drive file or folder to your drive.</p>
 
         <div id="auth-container">
             <div id="initial-loader" class="loader"></div>
-            <p id="initial-message" class="text-center text-blue-200">Initializing Google Services...</p>
+            <p id="initial-message" class="text-center text-secondary">Initializing Google Services...</p>
             <button id="authorize_button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center btn-glow" style="display: none;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M20.94 14.06a9 9 0 1 1-4.94-4.94"/><path d="M12 3v10"/></svg>
                 <span>Authorize with Google</span>
@@ -144,16 +144,16 @@
 
         <div id="uploader-container" class="hidden">
             <div class="mb-4">
-                <label for="urlInput" class="block text-blue-200 text-sm font-bold mb-2">Source File or Folder URL:</label>
-                <input type="text" id="urlInput" class="shadow-inner appearance-none border border-indigo-800 rounded-lg w-full py-3 px-4 bg-indigo-900/50 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300" placeholder="Enter Google Drive URL">
+                <label for="urlInput" class="block text-secondary text-sm font-bold mb-2">Source File or Folder URL:</label>
+                <input type="text" id="urlInput" class="shadow-inner appearance-none border rounded-lg w-full py-3 px-4 text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 input-bg" placeholder="Enter Google Drive URL">
             </div>
             <div class="mb-6">
-                <label for="destFolderId" class="block text-blue-200 text-sm font-bold mb-2">Destination Folder ID (Optional):</label>
-                <input type="text" id="destFolderId" class="shadow-inner appearance-none border border-indigo-800 rounded-lg w-full py-3 px-4 bg-indigo-900/50 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Leave blank for My Drive root">
+                <label for="destFolderId" class="block text-secondary text-sm font-bold mb-2">Destination Folder ID (Optional):</label>
+                <input type="text" id="destFolderId" class="shadow-inner appearance-none border rounded-lg w-full py-3 px-4 text-primary leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 input-bg" placeholder="Leave blank for My Drive root">
             </div>
             <div class="flex items-center justify-center mb-6">
                 <label for="speedBooster" class="flex items-center cursor-pointer">
-                    <span class="mr-3 text-blue-200">Speed Booster</span>
+                    <span class="mr-3 text-secondary">Speed Booster</span>
                     <div class="switch">
                         <input type="checkbox" id="speedBooster" checked>
                         <span class="slider"></span>
@@ -184,8 +184,7 @@
         // --- DOM Elements ---
         const ui = {
             body: document.body,
-            themeDarkButton: document.getElementById('theme_dark_button'),
-            themeStarsButton: document.getElementById('theme_stars_button'),
+            themeSwitcher: document.getElementById('theme_switcher'),
             authorizeButton: document.getElementById('authorize_button'),
             signoutButton: document.getElementById('signout_button'),
             copyButton: document.getElementById('copy_button'),
@@ -205,6 +204,8 @@
         let tokenClient;
         let isCopyCancelled = false;
         let initTimedOut = false;
+        const themes = ['theme-dark', 'theme-stars', 'theme-rose', 'theme-aqua'];
+        let currentThemeIndex = 0;
 
         // --- Initialization ---
         setTimeout(() => {
@@ -243,8 +244,10 @@
         }
 
         // --- Event Listeners ---
-        ui.themeDarkButton.onclick = () => { ui.body.className = 'theme-dark flex items-center justify-center'; };
-        ui.themeStarsButton.onclick = () => { ui.body.className = 'theme-stars flex items-center justify-center'; };
+        ui.themeSwitcher.onclick = () => {
+            currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+            ui.body.className = `${themes[currentThemeIndex]} flex items-center justify-center`;
+        };
         ui.authorizeButton.onclick = () => {
             if (tokenClient) tokenClient.requestAccessToken();
             else handleError('Authorization client is not ready.');
@@ -285,8 +288,9 @@
         };
         ui.urlInput.addEventListener('input', () => {
             const url = ui.urlInput.value;
+            const defaultColor = ui.body.classList.contains('theme-dark') || ui.body.classList.contains('theme-stars') ? '#3e4c94' : '#a6c1ee';
             if (url === '') {
-                ui.urlInput.style.borderColor = '#4f46e5'; // Default indigo
+                ui.urlInput.style.borderColor = defaultColor;
             } else if (getItemIdFromUrl(url)) {
                 ui.urlInput.style.borderColor = '#34d399'; // Green
             } else {
@@ -428,8 +432,8 @@
             p.className = 'flex items-center justify-center';
 
             let icon = '';
-            const colorClasses = { red: 'text-red-400', green: 'text-green-400', gray: 'text-blue-200' };
-            p.classList.add(colorClasses[status] || 'text-blue-200');
+            const colorClasses = { red: 'text-red-400', green: 'text-green-400', gray: 'text-secondary' };
+            p.classList.add(colorClasses[status] || 'text-secondary');
 
             if (status === 'green') {
                 icon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
@@ -464,7 +468,7 @@
         function showMessageWithLoader(text) {
             ui.messageContainer.innerHTML = `
                 <div class="loader"></div>
-                <p class="text-blue-200">${text}</p>
+                <p class="text-secondary">${text}</p>
                 <div class="progress-bar-container mt-4"><div id="progressBar" class="progress-bar"></div></div>
                 <div id="log-container" class="mt-2"></div>
                 <button id="cancel_button" class="mt-4 w-1/2 mx-auto bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">Cancel</button>
