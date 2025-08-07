@@ -9,13 +9,56 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            transition: background 0.5s ease;
+        }
+        /* --- Dark Theme (Default) --- */
+        .theme-dark {
             background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%);
         }
-        .card {
+        .theme-dark .card {
             background: rgba(23, 37, 84, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+
+        /* --- Live Stars Theme --- */
+        .theme-stars {
+            background: #000;
+            overflow: hidden;
+        }
+        .stars, .stars2 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .stars {
+            background: #000 url(https://www.transparenttextures.com/patterns/stardust.png) repeat top center;
+            z-index: 0;
+        }
+        .stars2 {
+            background: transparent url(https://s3-us-west-2.amazonaws.com/s.cdpn.io/1231630/twinkling.png) repeat top center;
+            z-index: 1;
+            animation: move-twink-back 200s linear infinite;
+        }
+        @keyframes move-twink-back {
+            from {background-position:0 0;}
+            to {background-position:-10000px 5000px;}
+        }
+        
+        .card {
+            z-index: 2; /* Ensure card is above the stars */
+        }
+        .theme-stars .card {
+            background: rgba(10, 10, 25, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
         .loader {
             border: 4px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%;
@@ -50,10 +93,27 @@
             font-size: 0.8rem;
             text-align: left;
         }
+        /* Toggle Switch CSS */
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #4a5568; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #4299e1; }
+        input:checked + .slider:before { transform: translateX(22px); }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
-    <div class="card p-8 rounded-2xl shadow-2xl w-full max-w-md">
+<body class="theme-dark">
+    <div class="stars"></div>
+    <div class="stars2"></div>
+
+    <div class="card p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
+        <div class="absolute top-4 right-4 flex space-x-2">
+            <button id="theme_dark_button" title="Dark Theme" class="w-8 h-8 rounded-full bg-indigo-900 border-2 border-white"></button>
+            <button id="theme_stars_button" title="Stars Theme" class="w-8 h-8 rounded-full bg-black border-2 border-gray-500 flex items-center justify-center">
+                <span class="text-white text-xs">✨</span>
+            </button>
+        </div>
+
         <h1 class="text-3xl font-bold text-center mb-2 text-white">Rohan X Uploader</h1>
         <p class="text-center text-blue-200 mb-8">Copy any Google Drive file or folder to your drive.</p>
 
@@ -75,6 +135,15 @@
                 <label for="destFolderId" class="block text-blue-200 text-sm font-bold mb-2">Destination Folder ID (Optional):</label>
                 <input type="text" id="destFolderId" class="shadow-inner appearance-none border border-indigo-800 rounded-lg w-full py-3 px-4 bg-indigo-900/50 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Leave blank for My Drive root">
             </div>
+            <div class="flex items-center justify-center mb-6">
+                <label for="speedBooster" class="flex items-center cursor-pointer">
+                    <span class="mr-3 text-blue-200">Speed Booster</span>
+                    <div class="switch">
+                        <input type="checkbox" id="speedBooster" checked>
+                        <span class="slider"></span>
+                    </div>
+                </label>
+            </div>
             <button id="copy_button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 <span>Start Copy</span>
@@ -94,9 +163,13 @@
         const API_KEY = "AIzaSyBB-dcmDtOcuMlmQ4BGje2BjrdagI1EG6s";
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
         const SCOPES = 'https://www.googleapis.com/auth/drive';
+        const CONCURRENT_REQUESTS = 5; // Number of files to copy in parallel
 
         // --- DOM Elements ---
         const ui = {
+            body: document.body,
+            themeDarkButton: document.getElementById('theme_dark_button'),
+            themeStarsButton: document.getElementById('theme_stars_button'),
             authorizeButton: document.getElementById('authorize_button'),
             signoutButton: document.getElementById('signout_button'),
             copyButton: document.getElementById('copy_button'),
@@ -106,7 +179,8 @@
             initialLoader: document.getElementById('initial-loader'),
             initialMessage: document.getElementById('initial-message'),
             urlInput: document.getElementById('urlInput'),
-            destFolderIdInput: document.getElementById('destFolderId')
+            destFolderIdInput: document.getElementById('destFolderId'),
+            speedBooster: document.getElementById('speedBooster')
         };
 
         // --- Global State ---
@@ -117,14 +191,12 @@
         let initTimedOut = false;
 
         // --- Initialization ---
-        
-        // Failsafe Timer
         setTimeout(() => {
             if (!gapiInited || !gisInited) {
                 initTimedOut = true;
                 handleError("Initialization timed out. Please check your internet connection, disable any ad blockers, and refresh the page.");
             }
-        }, 10000); // 10 seconds
+        }, 10000);
 
         function gapiLoaded() { gapi.load('client', initializeGapiClient); }
         async function initializeGapiClient() {
@@ -154,16 +226,17 @@
             }
         }
 
+        // --- Theme Switcher ---
+        ui.themeDarkButton.onclick = () => { ui.body.className = 'theme-dark'; };
+        ui.themeStarsButton.onclick = () => { ui.body.className = 'theme-stars'; };
+
         // --- Auth Flow ---
         ui.authorizeButton.onclick = () => {
             if (tokenClient) tokenClient.requestAccessToken();
             else handleError('Authorization client is not ready.');
         };
         function handleAuthResponse(response) {
-            if (response.error) {
-                handleError(`Authorization failed: ${response.error}`, response);
-                return;
-            }
+            if (response.error) { handleError(`Authorization failed: ${response.error}`, response); return; }
             gapi.client.setToken(response);
             ui.authContainer.style.display = 'none';
             ui.uploaderContainer.style.display = 'block';
@@ -217,8 +290,8 @@
         }
 
         async function copyFolder(sourceFolder, destParentId) {
-            showMessageWithLoader('Analyzing folder...');
-            const allFilesAndFolders = await listAllItems(sourceFolder.id);
+            showMessageWithLoader('Analyzing folder structure...');
+            const allItems = await listAllItems(sourceFolder.id);
             if (isCopyCancelled) { showMessage('Copy cancelled.', 'gray'); return; }
 
             const newFolder = await gapi.client.drive.files.create({
@@ -229,9 +302,7 @@
             const folderIdMap = new Map();
             folderIdMap.set(sourceFolder.id, newFolder.result.id);
             
-            let filesCopied = 0;
-
-            const allFolders = allFilesAndFolders.filter(item => item.mimeType === 'application/vnd.google-apps.folder');
+            const allFolders = allItems.filter(item => item.mimeType === 'application/vnd.google-apps.folder');
             for (const folder of allFolders) {
                  if (isCopyCancelled) { showMessage('Copy cancelled by user.', 'red'); return; }
                  const parentId = folder.parents[0];
@@ -244,18 +315,41 @@
                  folderIdMap.set(folder.id, newSubFolder.result.id);
             }
 
-            const allFiles = allFilesAndFolders.filter(item => item.mimeType !== 'application/vnd.google-apps.folder');
-            for (const file of allFiles) {
-                if (isCopyCancelled) { showMessage('Copy cancelled by user.', 'red'); return; }
-                const parentId = file.parents[0];
-                const newParentId = folderIdMap.get(parentId);
-                logMessage(`Copying file: ${file.name}`);
-                await gapi.client.drive.files.copy({
-                    fileId: file.id,
-                    resource: { name: file.name, parents: [newParentId] }
-                });
-                filesCopied++;
-                updateProgressBar(filesCopied, allFiles.length);
+            const allFiles = allItems.filter(item => item.mimeType !== 'application/vnd.google-apps.folder');
+            let filesCopied = 0;
+
+            if (ui.speedBooster.checked) {
+                logMessage(`Speed Booster enabled: Copying ${CONCURRENT_REQUESTS} files at a time.`);
+                const queue = [...allFiles];
+                while (queue.length > 0) {
+                    if (isCopyCancelled) { showMessage('Copy cancelled by user.', 'red'); return; }
+                    const chunk = queue.splice(0, CONCURRENT_REQUESTS);
+                    await Promise.all(chunk.map(async file => {
+                        const parentId = file.parents[0];
+                        const newParentId = folderIdMap.get(parentId);
+                        logMessage(`Copying: ${file.name}`);
+                        await gapi.client.drive.files.copy({
+                            fileId: file.id,
+                            resource: { name: file.name, parents: [newParentId] }
+                        });
+                        filesCopied++;
+                        updateProgressBar(filesCopied, allFiles.length);
+                    }));
+                }
+            } else {
+                logMessage('Speed Booster disabled: Copying 1 file at a time.');
+                for (const file of allFiles) {
+                    if (isCopyCancelled) { showMessage('Copy cancelled by user.', 'red'); return; }
+                    const parentId = file.parents[0];
+                    const newParentId = folderIdMap.get(parentId);
+                    logMessage(`Copying: ${file.name}`);
+                    await gapi.client.drive.files.copy({
+                        fileId: file.id,
+                        resource: { name: file.name, parents: [newParentId] }
+                    });
+                    filesCopied++;
+                    updateProgressBar(filesCopied, allFiles.length);
+                }
             }
 
             if (!isCopyCancelled) {
@@ -317,7 +411,7 @@
             if (linkUrl) {
                 const link = document.createElement('a');
                 link.href = linkUrl;
-                link.textContent = 'View Copied File';
+                link.textContent = 'View Copied Item';
                 link.target = '_blank';
                 link.className = 'text-blue-400 hover:underline ml-2';
                 p.appendChild(link);
