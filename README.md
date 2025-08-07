@@ -1,1 +1,1 @@
-logo.png
+![Company Logo](images/logo.png)
