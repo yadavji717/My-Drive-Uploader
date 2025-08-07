@@ -1,1 +1,1 @@
-![Company Logo](images/logo.png)
+![RXUploader](images/logo.png)
