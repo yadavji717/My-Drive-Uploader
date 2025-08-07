@@ -9,189 +9,268 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%);
+        }
+        .card {
+            background: rgba(23, 37, 84, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .loader {
-            border: 4px solid #f3f3f3;
+            border: 4px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%;
-            border-top: 4px solid #3498db;
+            border-top: 4px solid #60a5fa;
             width: 40px;
             height: 40px;
-            animation: spin 2s linear infinite;
+            animation: spin 1s linear infinite;
             margin: 20px auto;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .progress-bar-container {
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 10px;
+            background-color: #60a5fa;
+            width: 0%;
+            transition: width 0.3s ease-in-out;
+        }
+        #log-container {
+            max-height: 100px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            text-align: left;
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
-    <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md">
-        <h1 class="text-3xl font-bold text-center mb-2 text-cyan-400">Rohan X Uploader</h1>
-        <p class="text-center text-gray-400 mb-6">Copy any Google Drive file to your drive in a flash.</p>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="card p-8 rounded-2xl shadow-2xl w-full max-w-md">
+        <h1 class="text-3xl font-bold text-center mb-2 text-white">Rohan X Uploader</h1>
+        <p class="text-center text-blue-200 mb-8">Copy any Google Drive file or folder to your drive.</p>
 
         <div id="auth-container">
             <div id="initial-loader" class="loader"></div>
-            <p id="initial-message" class="text-center text-gray-400">Initializing Google Services...</p>
-            <button id="authorize_button" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105" style="display: none;">
-                Authorize with Google
+            <p id="initial-message" class="text-center text-blue-200">Initializing Google Services...</p>
+            <button id="authorize_button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center" style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M20.94 14.06a9 9 0 1 1-4.94-4.94"/><path d="M12 3v10"/></svg>
+                <span>Authorize with Google</span>
             </button>
         </div>
 
         <div id="uploader-container" class="hidden">
             <div class="mb-4">
-                <label for="fileUrl" class="block text-gray-400 text-sm font-bold mb-2">Source File URL:</label>
-                <input type="text" id="fileUrl" class="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 bg-gray-700 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Enter Google Drive file URL">
+                <label for="urlInput" class="block text-blue-200 text-sm font-bold mb-2">Source File or Folder URL:</label>
+                <input type="text" id="urlInput" class="shadow-inner appearance-none border border-indigo-800 rounded-lg w-full py-3 px-4 bg-indigo-900/50 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Google Drive URL">
             </div>
             <div class="mb-6">
-                <label for="folderId" class="block text-gray-400 text-sm font-bold mb-2">Destination Folder ID (Optional):</label>
-                <input type="text" id="folderId" class="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 bg-gray-700 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Enter destination folder ID">
-                 <p class="text-xs text-gray-500 mt-1">If left blank, the file will be copied to your 'My Drive' root.</p>
+                <label for="destFolderId" class="block text-blue-200 text-sm font-bold mb-2">Destination Folder ID (Optional):</label>
+                <input type="text" id="destFolderId" class="shadow-inner appearance-none border border-indigo-800 rounded-lg w-full py-3 px-4 bg-indigo-900/50 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Leave blank for My Drive root">
             </div>
-            <button id="copy_button" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
-                Copy File
+            <button id="copy_button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Start Copy</span>
             </button>
-            <button id="signout_button" class="w-full mt-3 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
-                Sign Out
+            <button id="signout_button" class="w-full mt-3 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span>Sign Out</span>
             </button>
         </div>
 
-        <div id="message" class="mt-6 text-center"></div>
+        <div id="message-container" class="mt-6 text-center"></div>
     </div>
     
+    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+
     <script>
         // --- Configuration ---
         const CLIENT_ID = "917652135636-fig5jstj49aj8rmbdjj0als4126ehmcm.apps.googleusercontent.com";
         const API_KEY = "AIzaSyBB-dcmDtOcuMlmQ4BGje2BjrdagI1EG6s";
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        const SCOPES = 'https://www.googleapis.com/auth/drive';
 
         // --- DOM Elements ---
-        const authorizeButton = document.getElementById('authorize_button');
-        const signoutButton = document.getElementById('signout_button');
-        const copyButton = document.getElementById('copy_button');
-        const messageDiv = document.getElementById('message');
-        const authContainer = document.getElementById('auth-container');
-        const uploaderContainer = document.getElementById('uploader-container');
-        const initialLoader = document.getElementById('initial-loader');
-        const initialMessage = document.getElementById('initial-message');
+        const ui = {
+            authorizeButton: document.getElementById('authorize_button'),
+            signoutButton: document.getElementById('signout_button'),
+            copyButton: document.getElementById('copy_button'),
+            messageContainer: document.getElementById('message-container'),
+            authContainer: document.getElementById('auth-container'),
+            uploaderContainer: document.getElementById('uploader-container'),
+            initialLoader: document.getElementById('initial-loader'),
+            initialMessage: document.getElementById('initial-message'),
+            urlInput: document.getElementById('urlInput'),
+            destFolderIdInput: document.getElementById('destFolderId')
+        };
 
         // --- Global State ---
         let gapiInited = false;
         let gisInited = false;
         let tokenClient;
+        let isCopyCancelled = false;
 
         // --- Initialization ---
-        function gapiLoaded() {
-            gapi.load('client', initializeGapiClient);
-        }
-
+        function gapiLoaded() { gapi.load('client', initializeGapiClient); }
         async function initializeGapiClient() {
             try {
                 await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
                 gapiInited = true;
                 checkReadyState();
-            } catch (error) {
-                handleError('GAPI client initialize karne mein error. API Key check karein.', error);
-            }
+            } catch (error) { handleError('GAPI client failed to initialize. Check API Key.', error); }
         }
-
         function gisLoaded() {
             try {
                 tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: SCOPES,
-                    callback: handleAuthResponse, // Yeh function safal auth response ko handle karega
+                    client_id: CLIENT_ID, scope: SCOPES, callback: handleAuthResponse,
                 });
                 gisInited = true;
                 checkReadyState();
-            } catch (error) {
-                handleError('Google Identity Services initialize karne mein error. Client ID check karein.', error);
-            }
+            } catch (error) { handleError('Google Identity Services failed to initialize. Check Client ID.', error); }
         }
-
         function checkReadyState() {
             if (gapiInited && gisInited) {
-                initialLoader.style.display = 'none';
-                initialMessage.style.display = 'none';
-                authorizeButton.style.display = 'block';
-                showMessage('Authorize karne ke liye taiyar.', 'gray');
+                ui.initialLoader.style.display = 'none';
+                ui.initialMessage.style.display = 'none';
+                ui.authorizeButton.style.display = 'flex';
+                showMessage('Ready to authorize.', 'gray');
             }
         }
 
         // --- Auth Flow ---
-        authorizeButton.onclick = function() {
-            if (tokenClient) {
-                tokenClient.requestAccessToken();
-            } else {
-                handleError('Authorization client taiyar nahi hai.');
-            }
+        ui.authorizeButton.onclick = () => {
+            if (tokenClient) tokenClient.requestAccessToken();
+            else handleError('Authorization client is not ready.');
         };
-
         function handleAuthResponse(response) {
             if (response.error) {
-                handleError(`Authorization fail ho gayi: ${response.error}`, response);
+                handleError(`Authorization failed: ${response.error}`, response);
                 return;
             }
-            // Token ko GAPI client ko pass karein
             gapi.client.setToken(response);
-            // Uploader UI dikhayein
-            authContainer.style.display = 'none';
-            uploaderContainer.style.display = 'block';
-            showMessage('Authorization safal!', 'green');
+            ui.authContainer.style.display = 'none';
+            ui.uploaderContainer.style.display = 'block';
+            showMessage('Authorization successful!', 'green');
         }
-
-        signoutButton.onclick = function() {
+        ui.signoutButton.onclick = () => {
             const token = gapi.client.getToken();
             if (token) {
                 google.accounts.oauth2.revoke(token.access_token, () => {
                     gapi.client.setToken(null);
-                    uploaderContainer.style.display = 'none';
-                    authContainer.style.display = 'block';
-                    showMessage('Aap sign out ho chuke hain.', 'gray');
+                    ui.uploaderContainer.style.display = 'none';
+                    ui.authContainer.style.display = 'block';
+                    showMessage('You have been signed out.', 'gray');
                 });
             }
         };
 
         // --- Core Logic ---
-        copyButton.onclick = async function() {
-            const fileUrl = document.getElementById('fileUrl').value;
-            if (!fileUrl) {
-                showMessage('Kripya source file URL dalein.', 'red');
-                return;
-            }
-            const fileId = getFileIdFromUrl(fileUrl);
-            if (!fileId) {
-                showMessage('Anya Google Drive URL. Link check karein.', 'red');
-                return;
-            }
+        ui.copyButton.onclick = async () => {
+            const url = ui.urlInput.value;
+            const destFolderId = ui.destFolderIdInput.value || 'root';
+            if (!url) { showMessage('Please enter a source URL.', 'red'); return; }
+            const sourceId = getItemIdFromUrl(url);
+            if (!sourceId) { showMessage('Invalid Google Drive URL.', 'red'); return; }
 
-            showMessage('', 'gray'); // Pichhla message saaf karein
-            const copyLoader = document.createElement('div');
-            copyLoader.className = 'loader';
-            messageDiv.appendChild(copyLoader);
-            messageDiv.insertAdjacentText('beforeend', 'File copy ho rahi hai...');
-
-
+            isCopyCancelled = false;
+            ui.copyButton.disabled = true;
+            
             try {
-                const meta = await gapi.client.drive.files.get({ fileId: fileId, fields: 'name' });
-                const response = await gapi.client.drive.files.copy({
-                    fileId: fileId,
-                    resource: { name: `Copy of ${meta.result.name}` },
-                    fields: 'id, webViewLink'
-                });
-                showMessage(`File safaltapoorvak copy ho gayi!`, 'green', response.result.webViewLink);
+                const sourceMeta = await gapi.client.drive.files.get({ fileId: sourceId, fields: 'id, name, mimeType' });
+                if (sourceMeta.result.mimeType === 'application/vnd.google-apps.folder') {
+                    await copyFolder(sourceMeta.result, destFolderId);
+                } else {
+                    await copyFile(sourceMeta.result, destFolderId);
+                }
             } catch (error) {
-                handleError('File copy karne mein fail. Permissions ya link check karein.', error);
+                handleError('Failed to copy. Please check the link and your permissions.', error);
+            } finally {
+                ui.copyButton.disabled = false;
             }
         };
 
+        async function copyFile(sourceFile, destParentId) {
+            showMessageWithLoader('Copying file...');
+            const response = await gapi.client.drive.files.copy({
+                fileId: sourceFile.id,
+                resource: { name: sourceFile.name, parents: [destParentId] },
+                fields: 'id, webViewLink'
+            });
+            showMessage(`File copied successfully!`, 'green', response.result.webViewLink);
+        }
+
+        async function copyFolder(sourceFolder, destParentId) {
+            showMessageWithLoader('Analyzing folder...');
+            const allFiles = await listAllFiles(sourceFolder.id);
+            if (isCopyCancelled) { showMessage('Copy cancelled.', 'gray'); return; }
+
+            const newFolder = await gapi.client.drive.files.create({
+                resource: { name: sourceFolder.name, mimeType: 'application/vnd.google-apps.folder', parents: [destParentId] },
+                fields: 'id, name'
+            });
+
+            await copyFolderRecursive(sourceFolder.id, newFolder.result.id, allFiles, 0);
+            if (!isCopyCancelled) {
+                showMessage('Folder and all its contents copied successfully!', 'green');
+            }
+        }
+        
+        async function listAllFiles(folderId) {
+            const allFiles = [];
+            let pageToken = null;
+            do {
+                const response = await gapi.client.drive.files.list({
+                    q: `'${folderId}' in parents and trashed = false`,
+                    fields: 'nextPageToken, files(id, name, mimeType)',
+                    pageSize: 1000,
+                    pageToken: pageToken
+                });
+                allFiles.push(...response.result.files);
+                pageToken = response.result.nextPageToken;
+            } while (pageToken);
+            return allFiles;
+        }
+
+        async function copyFolderRecursive(sourceFolderId, newParentFolderId, allFiles, filesCopied) {
+            const itemsInThisFolder = allFiles.filter(f => f.parents && f.parents.includes(sourceFolderId));
+
+            for (const item of itemsInThisFolder) {
+                if (isCopyCancelled) { showMessage('Copy cancelled by user.', 'red'); return; }
+                
+                updateProgressBar(filesCopied, allFiles.length);
+                
+                if (item.mimeType === 'application/vnd.google-apps.folder') {
+                    const newSubFolder = await gapi.client.drive.files.create({
+                        resource: { name: item.name, mimeType: 'application/vnd.google-apps.folder', parents: [newParentFolderId] },
+                        fields: 'id'
+                    });
+                    logMessage(`Created subfolder: ${item.name}`);
+                    await copyFolderRecursive(item.id, newSubFolder.result.id, allFiles, filesCopied);
+                } else {
+                    logMessage(`Copying file: ${item.name}`);
+                    await gapi.client.drive.files.copy({
+                        fileId: item.id,
+                        resource: { name: item.name, parents: [newParentFolderId] }
+                    });
+                    filesCopied++;
+                }
+            }
+             return filesCopied;
+        }
+
         // --- Utility Functions ---
-        function getFileIdFromUrl(url) {
+        function getItemIdFromUrl(url) {
             const regexes = [
                 /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
-                /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/,
-                /drive\.google\.com\/uc\?id=([a-zA-Z0-9_-]+)/,
+                /drive\.google\.com\/drive\/folders\/([a-zA-Z0-9_-]+)/
             ];
             for (const regex of regexes) {
                 const match = url.match(regex);
@@ -201,37 +280,57 @@
         }
 
         function showMessage(text, color, linkUrl = null) {
-            messageDiv.innerHTML = ''; // Pichhla content saaf karein
-            messageDiv.textContent = text;
-            const colorClasses = {
-                red: 'text-red-400',
-                green: 'text-green-400',
-                yellow: 'text-yellow-400',
-                gray: 'text-gray-400'
-            };
-            messageDiv.className = `mt-6 text-center ${colorClasses[color] || 'text-gray-400'}`;
+            ui.messageContainer.innerHTML = '';
+            const p = document.createElement('p');
+            p.textContent = text;
+            const colorClasses = { red: 'text-red-400', green: 'text-green-400', gray: 'text-blue-200' };
+            p.className = colorClasses[color] || 'text-blue-200';
+            ui.messageContainer.appendChild(p);
+
             if (linkUrl) {
                 const link = document.createElement('a');
                 link.href = linkUrl;
-                link.textContent = 'Copy ki gayi file dekhein';
+                link.textContent = 'View Copied File';
                 link.target = '_blank';
-                link.className = 'text-cyan-400 hover:underline ml-2';
-                messageDiv.appendChild(link);
+                link.className = 'text-blue-400 hover:underline ml-2';
+                p.appendChild(link);
+            }
+        }
+
+        function showMessageWithLoader(text) {
+            ui.messageContainer.innerHTML = `
+                <div class="loader"></div>
+                <p class="text-blue-200">${text}</p>
+                <div class="progress-bar-container mt-4"><div id="progressBar" class="progress-bar"></div></div>
+                <div id="log-container" class="mt-2"></div>
+                <button id="cancel_button" class="mt-4 w-1/2 mx-auto bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">Cancel</button>
+            `;
+            document.getElementById('cancel_button').onclick = () => { isCopyCancelled = true; };
+        }
+        
+        function updateProgressBar(current, total) {
+            const bar = document.getElementById('progressBar');
+            if (bar) {
+                const percentage = total > 0 ? (current / total) * 100 : 0;
+                bar.style.width = `${percentage}%`;
+            }
+        }
+
+        function logMessage(text) {
+            const logContainer = document.getElementById('log-container');
+            if(logContainer) {
+                const p = document.createElement('p');
+                p.textContent = text;
+                logContainer.appendChild(p);
+                logContainer.scrollTop = logContainer.scrollHeight;
             }
         }
 
         function handleError(userMessage, errorObject) {
             console.error(userMessage, errorObject || '');
             showMessage(userMessage, 'red');
-            initialLoader.style.display = 'none';
-            initialMessage.style.display = 'none';
-            authorizeButton.style.display = 'block'; // Error ke baad bhi button dikhayein
-            authorizeButton.textContent = 'Try Again';
+            ui.copyButton.disabled = false;
         }
     </script>
-    
-    <!-- Dono scripts ko yahan load kiya ja raha hai -->
-    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
 </html>
