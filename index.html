@@ -58,7 +58,7 @@
 
         <div id="message" class="mt-6 text-center"></div>
     </div>
-
+    
     <script>
         // --- Configuration ---
         const CLIENT_ID = "917652135636-fig5jstj49aj8rmbdjj0als4126ehmcm.apps.googleusercontent.com";
@@ -76,76 +76,85 @@
         const initialLoader = document.getElementById('initial-loader');
         const initialMessage = document.getElementById('initial-message');
 
+        // --- Global State ---
+        let gapiInited = false;
+        let gisInited = false;
+        let tokenClient;
+
         // --- Initialization ---
-        
-        /**
-         * GAPI client library ko initialize karta hai aur sign-in state listeners set karta hai.
-         * Yeh purana, lekin zyada compatible gapi.auth2 library istemal karta hai.
-         */
-        function initClient() {
-            gapi.client.init({
-                apiKey: API_KEY,
-                clientId: CLIENT_ID,
-                discoveryDocs: DISCOVERY_DOCS,
-                scope: SCOPES
-            }).then(function () {
-                // Shuruaati loader ko chupayein aur authorize button dikhayein
-                initialLoader.style.display = 'none';
-                initialMessage.style.display = 'none';
-                authorizeButton.style.display = 'block';
-
-                // Sign-in state mein badlav ke liye sunein.
-                gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
-
-                // Shuruaati sign-in state ko handle karein.
-                updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
-                
-                // Buttons ke liye click handlers assign karein
-                authorizeButton.onclick = handleAuthClick;
-                signoutButton.onclick = handleSignoutClick;
-                copyButton.onclick = handleCopyClick;
-            }, function(error) {
-                handleError('Google client initialize karne mein error. API Key ya Client ID configuration check karein.', error);
-            });
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
         }
-        
-        /**
-         * Yeh function Google API script load hone ke baad call hota hai.
-         * Isey window object se joda gaya hai taaki yeh globally accessible ho.
-         */
-        window.handleClientLoad = function() {
+
+        async function initializeGapiClient() {
             try {
-                gapi.load('client:auth2', initClient);
+                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
+                gapiInited = true;
+                checkReadyState();
             } catch (error) {
-                handleError('Google libraries load karne mein fail.', error);
+                handleError('GAPI client initialize karne mein error. API Key check karein.', error);
             }
         }
 
-        // --- Auth Logic ---
+        function gisLoaded() {
+            try {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: handleAuthResponse, // Yeh function safal auth response ko handle karega
+                });
+                gisInited = true;
+                checkReadyState();
+            } catch (error) {
+                handleError('Google Identity Services initialize karne mein error. Client ID check karein.', error);
+            }
+        }
 
-        function updateSigninStatus(isSignedIn) {
-            if (isSignedIn) {
-                authContainer.style.display = 'none';
-                uploaderContainer.style.display = 'block';
-                showMessage('Authorization safal!', 'green');
-            } else {
-                authContainer.style.display = 'block';
-                uploaderContainer.style.display = 'none';
+        function checkReadyState() {
+            if (gapiInited && gisInited) {
+                initialLoader.style.display = 'none';
+                initialMessage.style.display = 'none';
+                authorizeButton.style.display = 'block';
                 showMessage('Authorize karne ke liye taiyar.', 'gray');
             }
         }
 
-        function handleAuthClick() {
-            gapi.auth2.getAuthInstance().signIn();
+        // --- Auth Flow ---
+        authorizeButton.onclick = function() {
+            if (tokenClient) {
+                tokenClient.requestAccessToken();
+            } else {
+                handleError('Authorization client taiyar nahi hai.');
+            }
+        };
+
+        function handleAuthResponse(response) {
+            if (response.error) {
+                handleError(`Authorization fail ho gayi: ${response.error}`, response);
+                return;
+            }
+            // Token ko GAPI client ko pass karein
+            gapi.client.setToken(response);
+            // Uploader UI dikhayein
+            authContainer.style.display = 'none';
+            uploaderContainer.style.display = 'block';
+            showMessage('Authorization safal!', 'green');
         }
 
-        function handleSignoutClick() {
-            gapi.auth2.getAuthInstance().signOut();
-        }
+        signoutButton.onclick = function() {
+            const token = gapi.client.getToken();
+            if (token) {
+                google.accounts.oauth2.revoke(token.access_token, () => {
+                    gapi.client.setToken(null);
+                    uploaderContainer.style.display = 'none';
+                    authContainer.style.display = 'block';
+                    showMessage('Aap sign out ho chuke hain.', 'gray');
+                });
+            }
+        };
 
-        // --- Core App Logic ---
-        
-        async function handleCopyClick() {
+        // --- Core Logic ---
+        copyButton.onclick = async function() {
             const fileUrl = document.getElementById('fileUrl').value;
             if (!fileUrl) {
                 showMessage('Kripya source file URL dalein.', 'red');
@@ -163,6 +172,7 @@
             messageDiv.appendChild(copyLoader);
             messageDiv.insertAdjacentText('beforeend', 'File copy ho rahi hai...');
 
+
             try {
                 const meta = await gapi.client.drive.files.get({ fileId: fileId, fields: 'name' });
                 const response = await gapi.client.drive.files.copy({
@@ -174,7 +184,7 @@
             } catch (error) {
                 handleError('File copy karne mein fail. Permissions ya link check karein.', error);
             }
-        }
+        };
 
         // --- Utility Functions ---
         function getFileIdFromUrl(url) {
@@ -215,12 +225,13 @@
             showMessage(userMessage, 'red');
             initialLoader.style.display = 'none';
             initialMessage.style.display = 'none';
-            authorizeButton.style.display = 'none';
+            authorizeButton.style.display = 'block'; // Error ke baad bhi button dikhayein
+            authorizeButton.textContent = 'Try Again';
         }
     </script>
-    <!-- Yeh Google API load karne ka sabse vishvasniya tareeka hai. -->
-    <!-- `async defer` attributes page ko block nahi karte, -->
-    <!-- aur `onload=handleClientLoad` yeh sunishchit karta hai ki hamara code tabhi chale jab API taiyar ho. -->
-    <script async defer src="https://apis.google.com/js/api.js?onload=handleClientLoad"></script>
+    
+    <!-- Dono scripts ko yahan load kiya ja raha hai -->
+    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
 </html>
