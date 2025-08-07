@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rohan X Uploader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md">
+        <h1 class="text-3xl font-bold text-center mb-2 text-cyan-400">Rohan X Uploader</h1>
+        <p class="text-center text-gray-400 mb-6">Copy any Google Drive file to your drive in a flash.</p>
+
+        <div id="auth-container">
+            <div id="initial-loader" class="loader"></div>
+            <p id="initial-message" class="text-center text-gray-400">Initializing Google Services...</p>
+            <button id="authorize_button" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105" style="display: none;">
+                Authorize with Google
+            </button>
+        </div>
+
+        <div id="uploader-container" class="hidden">
+            <div class="mb-4">
+                <label for="fileUrl" class="block text-gray-400 text-sm font-bold mb-2">Source File URL:</label>
+                <input type="text" id="fileUrl" class="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 bg-gray-700 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Enter Google Drive file URL">
+            </div>
+            <div class="mb-6">
+                <label for="folderId" class="block text-gray-400 text-sm font-bold mb-2">Destination Folder ID (Optional):</label>
+                <input type="text" id="folderId" class="shadow-inner appearance-none border border-gray-700 rounded-lg w-full py-3 px-4 bg-gray-700 text-gray-200 leading-tight focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Enter destination folder ID">
+                 <p class="text-xs text-gray-500 mt-1">If left blank, the file will be copied to your 'My Drive' root.</p>
+            </div>
+            <button id="copy_button" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
+                Copy File
+            </button>
+            <button id="signout_button" class="w-full mt-3 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                Sign Out
+            </button>
+        </div>
+
+        <div id="message" class="mt-6 text-center"></div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const CLIENT_ID = "917652135636-fig5jstj49aj8rmbdjj0als4126ehmcm.apps.googleusercontent.com";
+        const API_KEY = "AIzaSyBB-dcmDtOcuMlmQ4BGje2BjrdagI1EG6s";
+        const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+        // --- DOM Elements ---
+        const authorizeButton = document.getElementById('authorize_button');
+        const signoutButton = document.getElementById('signout_button');
+        const copyButton = document.getElementById('copy_button');
+        const messageDiv = document.getElementById('message');
+        const authContainer = document.getElementById('auth-container');
+        const uploaderContainer = document.getElementById('uploader-container');
+        const initialLoader = document.getElementById('initial-loader');
+        const initialMessage = document.getElementById('initial-message');
+
+        // --- Initialization ---
+        
+        /**
+         * GAPI client library ko initialize karta hai aur sign-in state listeners set karta hai.
+         * Yeh purana, lekin zyada compatible gapi.auth2 library istemal karta hai.
+         */
+        function initClient() {
+            gapi.client.init({
+                apiKey: API_KEY,
+                clientId: CLIENT_ID,
+                discoveryDocs: DISCOVERY_DOCS,
+                scope: SCOPES
+            }).then(function () {
+                // Shuruaati loader ko chupayein aur authorize button dikhayein
+                initialLoader.style.display = 'none';
+                initialMessage.style.display = 'none';
+                authorizeButton.style.display = 'block';
+
+                // Sign-in state mein badlav ke liye sunein.
+                gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+
+                // Shuruaati sign-in state ko handle karein.
+                updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+                
+                // Buttons ke liye click handlers assign karein
+                authorizeButton.onclick = handleAuthClick;
+                signoutButton.onclick = handleSignoutClick;
+                copyButton.onclick = handleCopyClick;
+            }, function(error) {
+                handleError('Google client initialize karne mein error. API Key ya Client ID configuration check karein.', error);
+            });
+        }
+        
+        /**
+         * Yeh function Google API script load hone ke baad call hota hai.
+         * Isey window object se joda gaya hai taaki yeh globally accessible ho.
+         */
+        window.handleClientLoad = function() {
+            try {
+                gapi.load('client:auth2', initClient);
+            } catch (error) {
+                handleError('Google libraries load karne mein fail.', error);
+            }
+        }
+
+        // --- Auth Logic ---
+
+        function updateSigninStatus(isSignedIn) {
+            if (isSignedIn) {
+                authContainer.style.display = 'none';
+                uploaderContainer.style.display = 'block';
+                showMessage('Authorization safal!', 'green');
+            } else {
+                authContainer.style.display = 'block';
+                uploaderContainer.style.display = 'none';
+                showMessage('Authorize karne ke liye taiyar.', 'gray');
+            }
+        }
+
+        function handleAuthClick() {
+            gapi.auth2.getAuthInstance().signIn();
+        }
+
+        function handleSignoutClick() {
+            gapi.auth2.getAuthInstance().signOut();
+        }
+
+        // --- Core App Logic ---
+        
+        async function handleCopyClick() {
+            const fileUrl = document.getElementById('fileUrl').value;
+            if (!fileUrl) {
+                showMessage('Kripya source file URL dalein.', 'red');
+                return;
+            }
+            const fileId = getFileIdFromUrl(fileUrl);
+            if (!fileId) {
+                showMessage('Anya Google Drive URL. Link check karein.', 'red');
+                return;
+            }
+
+            showMessage('', 'gray'); // Pichhla message saaf karein
+            const copyLoader = document.createElement('div');
+            copyLoader.className = 'loader';
+            messageDiv.appendChild(copyLoader);
+            messageDiv.insertAdjacentText('beforeend', 'File copy ho rahi hai...');
+
+            try {
+                const meta = await gapi.client.drive.files.get({ fileId: fileId, fields: 'name' });
+                const response = await gapi.client.drive.files.copy({
+                    fileId: fileId,
+                    resource: { name: `Copy of ${meta.result.name}` },
+                    fields: 'id, webViewLink'
+                });
+                showMessage(`File safaltapoorvak copy ho gayi!`, 'green', response.result.webViewLink);
+            } catch (error) {
+                handleError('File copy karne mein fail. Permissions ya link check karein.', error);
+            }
+        }
+
+        // --- Utility Functions ---
+        function getFileIdFromUrl(url) {
+            const regexes = [
+                /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
+                /drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/,
+                /drive\.google\.com\/uc\?id=([a-zA-Z0-9_-]+)/,
+            ];
+            for (const regex of regexes) {
+                const match = url.match(regex);
+                if (match && match[1]) return match[1];
+            }
+            return null;
+        }
+
+        function showMessage(text, color, linkUrl = null) {
+            messageDiv.innerHTML = ''; // Pichhla content saaf karein
+            messageDiv.textContent = text;
+            const colorClasses = {
+                red: 'text-red-400',
+                green: 'text-green-400',
+                yellow: 'text-yellow-400',
+                gray: 'text-gray-400'
+            };
+            messageDiv.className = `mt-6 text-center ${colorClasses[color] || 'text-gray-400'}`;
+            if (linkUrl) {
+                const link = document.createElement('a');
+                link.href = linkUrl;
+                link.textContent = 'Copy ki gayi file dekhein';
+                link.target = '_blank';
+                link.className = 'text-cyan-400 hover:underline ml-2';
+                messageDiv.appendChild(link);
+            }
+        }
+
+        function handleError(userMessage, errorObject) {
+            console.error(userMessage, errorObject || '');
+            showMessage(userMessage, 'red');
+            initialLoader.style.display = 'none';
+            initialMessage.style.display = 'none';
+            authorizeButton.style.display = 'none';
+        }
+    </script>
+    <!-- Yeh Google API load karne ka sabse vishvasniya tareeka hai. -->
+    <!-- `async defer` attributes page ko block nahi karte, -->
+    <!-- aur `onload=handleClientLoad` yeh sunishchit karta hai ki hamara code tabhi chale jab API taiyar ho. -->
+    <script async defer src="https://apis.google.com/js/api.js?onload=handleClientLoad"></script>
+</body>
+</html>
