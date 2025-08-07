@@ -1,19 +1,19 @@
 {
   "name": "Rohan X Uploader",
   "short_name": "RXUploader",
-  "start_url": ".",
+  "start_url": "/My-Drive-Uploader/",
   "display": "standalone",
   "background_color": "#1a237e",
   "theme_color": "#283593",
   "description": "Copy any Google Drive file or folder to your drive in a flash.",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/My-Drive-Uploader/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon-512.png",
+      "src": "/My-Drive-Uploader/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
