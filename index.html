@@ -121,6 +121,13 @@
     </style>
 </head>
 <body class="theme-dark flex items-center justify-center">
+
+    <!-- Yeh div tag aapki website ke upar-left corner mein logo dikhayega. -->
+    <div class="fixed top-4 left-4 z-50">
+        <!-- 'logo.png' ko apne file ka naam de dein. -->
+        <img src="logo.png" alt="RXUploader Logo" class="w-12 h-12 rounded-full shadow-lg">
+    </div>
+
     <div class="stars"></div>
     <div class="stars2"></div>
 
@@ -457,7 +464,7 @@
                 copyBtn.className = 'text-blue-400 hover:text-white';
                 copyBtn.title = 'Copy Link';
                 copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(linkUrl);
+                    document.execCommand('copy');
                     showMessage('Link copied to clipboard!', 'green');
                 };
 
