@@ -1,39 +1,36 @@
-const CACHE_NAME = 'rohan-uploader-cache-v2'; // Naya version cache ko update karne ke liye
+const CACHE_NAME = 'rohan-uploader-cache-v3'; // New version
 const urlsToCache = [
   '/My-Drive-Uploader/',
   '/My-Drive-Uploader/index.html',
   '/My-Drive-Uploader/manifest.json',
   '/My-Drive-Uploader/icon-192.png',
-  '/My-Drive-Uploader/icon-512.png'
+  '/My-Drive-Uploader/icon-512.png',
+  '/My-Drive-Uploader/screenshot1.png',
+  '/My-Drive-Uploader/screenshot2.png'
 ];
 
-// Service worker ko install karein
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Cache khola gaya');
+        console.log('Opened cache');
         return cache.addAll(urlsToCache);
       })
   );
 });
 
-// Requests ko cache karein aur return karein
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Cache hit - response return karein
         if (response) {
           return response;
         }
         return fetch(event.request);
-      }
-    )
+      })
   );
 });
 
-// Puraane service worker ko update karein
 self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
