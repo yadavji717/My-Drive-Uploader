@@ -88,9 +88,6 @@
         <div id="message-container" class="mt-6 text-center"></div>
     </div>
     
-    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
-
     <script>
         // --- Configuration ---
         const CLIENT_ID = "917652135636-fig5jstj49aj8rmbdjj0als4126ehmcm.apps.googleusercontent.com";
@@ -117,10 +114,21 @@
         let gisInited = false;
         let tokenClient;
         let isCopyCancelled = false;
+        let initTimedOut = false;
 
         // --- Initialization ---
+        
+        // Failsafe Timer
+        setTimeout(() => {
+            if (!gapiInited || !gisInited) {
+                initTimedOut = true;
+                handleError("Initialization timed out. Please check your internet connection, disable any ad blockers, and refresh the page.");
+            }
+        }, 10000); // 10 seconds
+
         function gapiLoaded() { gapi.load('client', initializeGapiClient); }
         async function initializeGapiClient() {
+            if (initTimedOut) return;
             try {
                 await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
                 gapiInited = true;
@@ -128,6 +136,7 @@
             } catch (error) { handleError('GAPI client failed to initialize. Check API Key.', error); }
         }
         function gisLoaded() {
+            if (initTimedOut) return;
             try {
                 tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: CLIENT_ID, scope: SCOPES, callback: handleAuthResponse,
@@ -217,13 +226,11 @@
                 fields: 'id, name'
             });
 
-            // This map will store the new IDs of copied folders
             const folderIdMap = new Map();
             folderIdMap.set(sourceFolder.id, newFolder.result.id);
             
             let filesCopied = 0;
 
-            // First, create all subfolders to maintain the structure
             const allFolders = allFilesAndFolders.filter(item => item.mimeType === 'application/vnd.google-apps.folder');
             for (const folder of allFolders) {
                  if (isCopyCancelled) { showMessage('Copy cancelled by user.', 'red'); return; }
@@ -237,7 +244,6 @@
                  folderIdMap.set(folder.id, newSubFolder.result.id);
             }
 
-            // Now, copy all files into their correct new folders
             const allFiles = allFilesAndFolders.filter(item => item.mimeType !== 'application/vnd.google-apps.folder');
             for (const file of allFiles) {
                 if (isCopyCancelled) { showMessage('Copy cancelled by user.', 'red'); return; }
@@ -259,7 +265,6 @@
         
         async function listAllItems(folderId) {
             let allItems = [];
-            let pageToken = null;
             let foldersToProcess = [folderId];
             let processedFolders = new Set();
 
@@ -267,7 +272,7 @@
                 let currentFolderId = foldersToProcess.shift();
                 if(processedFolders.has(currentFolderId)) continue;
                 processedFolders.add(currentFolderId);
-
+                let pageToken = null;
                 do {
                     const response = await gapi.client.drive.files.list({
                         q: `'${currentFolderId}' in parents and trashed = false`,
@@ -354,5 +359,8 @@
             ui.copyButton.disabled = false;
         }
     </script>
+    
+    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
 </html>
