@@ -1,1 +1,1 @@
-![RXUploader](images/logo.png)
+![My-Drive-Uploader logo](logo.png)
