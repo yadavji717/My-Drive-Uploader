@@ -1,14 +1,14 @@
-const CACHE_NAME = 'rohan-uploader-cache-v3'; // New version
+const CACHE_NAME = 'rohan-uploader-cache-v4';
 const urlsToCache = [
-  '/My-Drive-Uploader/',
-  '/My-Drive-Uploader/index.html',
-  '/My-Drive-Uploader/manifest.json',
-  '/My-Drive-Uploader/icon-192.png',
-  '/My-Drive-Uploader/icon-512.png',
-  '/My-Drive-Uploader/screenshot1.png',
-  '/My-Drive-Uploader/screenshot2.png'
+  './',
+  './index.html',
+  './style.css',
+  './script.js',
+  './manifest.json',
+  './logo.png'
 ];
 
+// Install a service worker
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -19,18 +19,20 @@ self.addEventListener('install', event => {
   );
 });
 
+// Cache and return requests
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
-  );
+    // We are not caching Google API calls.
+    if (event.request.url.startsWith('https://apis.google.com') || event.request.url.startsWith('https://accounts.google.com')) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
+    event.respondWith(
+        fetch(event.request).catch(() => caches.match(event.request))
+    );
 });
 
+// Update a service worker
 self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
